@@ -1,0 +1,50 @@
+[package]
+name = "a2s-bot"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies.a2s]
+version = "0.5"
+default_features = false
+features = ["async"]
+
+[dependencies.mongodb]
+version = "2"
+default_features = false
+features = ["tokio-runtime"]
+
+[dependencies.futures]
+version = "0.3"
+
+[dependencies.serenity]
+version = "0.10"
+default-features = false
+features = ["client", "gateway", "rustls_backend", "model", "cache", "unstable_discord_api"]
+
+[dependencies.tokio]
+version = "1.12"
+features = ["macros", "rt-multi-thread"]
+
+[dependencies.serde]
+version = "1"
+features = ["derive"]
+
+[dependencies.thiserror]
+version = "1"
+
+[dependencies.itertools]
+version = "0.10"
+
+[dependencies.chrono]
+version = "0.4"
+
+[dependencies.cron]
+version = "0.9"
+
+[dependencies.uuid]
+version = "0.8"
+
+[dependencies.async-trait]
+version = "0.1.51"

@@ -1,0 +1,13 @@
+## File system
+.DS_Store
+desktop.ini
+
+## Editor
+.idea
+.vscode
+
+## Enviroment variable files
+.env
+
+## Build files
+target/
