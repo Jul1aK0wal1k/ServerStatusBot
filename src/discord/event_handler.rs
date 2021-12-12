@@ -87,9 +87,7 @@ impl EventHandler for Handler {
 
         let commands = ApplicationCommand::set_global_application_commands(&ctx.http, |commands| {
             commands
-                .create_application_command(|command| {
-                    command.name("ping").description("A ping command")
-                })
+                .create_application_command(|command| command.name("ping").description("A ping command"))
                 .create_application_command(|command| {
                     command
                         .name("watch")
@@ -97,18 +95,14 @@ impl EventHandler for Handler {
                         .create_option(|option| {
                             option
                                 .name("address")
-                                .description(
-                                    "The address to watch in the format of <host or IP>:<port>",
-                                )
+                                .description("The address to watch in the format of <host or IP>:<port>")
                                 .kind(ApplicationCommandOptionType::String)
                                 .required(true)
                         })
                         .create_option(|option| {
                             option
                                 .name("channel")
-                                .description(
-                                    "Where should I put the message about the server status?",
-                                )
+                                .description("Where should I put the message about the server status?")
                                 .kind(ApplicationCommandOptionType::Channel)
                                 .required(true)
                         })
@@ -116,10 +110,7 @@ impl EventHandler for Handler {
         })
         .await;
 
-        println!(
-            "I now have the following global slash commands: {:#?}",
-            commands
-        );
+        println!("I now have the following global slash commands: {:#?}", commands);
     }
 
     async fn cache_ready(&self, ctx: Context, guilds: Vec<GuildId>) {
@@ -139,11 +130,8 @@ impl EventHandler for Handler {
 
                     let guild_ids = guilds.iter().map(|x| x.to_string()).collect();
                     match guild_controller.server_addresses(guild_ids).await {
-                        Ok(settings) => {
-                            // let tasks = FuturesUnordered::new();
-                            for hosts in settings {
-                                server_controller.info_for(hosts).await;
-                            }
+                        Ok(hosts) => {
+                            let result = server_controller.info_for(hosts).await;
                         }
                         Err(_error) => todo!(),
                     }

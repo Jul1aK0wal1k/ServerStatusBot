@@ -1,4 +1,4 @@
-use crate::entities::BotSettings;
+use crate::entities::{Address, BotSettings};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -6,7 +6,8 @@ pub struct Guild {
     #[serde(rename = "_id")]
     pub id: String,
     pub name: String,
-    pub bot_settings: BotSettings,
+    pub addresses: Vec<Address>,
+    pub settings: BotSettings,
 }
 
 impl Guild {
@@ -14,7 +15,8 @@ impl Guild {
         Guild {
             id,
             name,
-            bot_settings: BotSettings::default(),
+            addresses: vec![],
+            settings: BotSettings::default(),
         }
     }
 }

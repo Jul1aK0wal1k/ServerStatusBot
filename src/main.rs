@@ -2,7 +2,9 @@ use serenity::prelude::*;
 use std::env;
 
 mod entities;
+mod errors;
 mod proxies;
+mod serde_helpers;
 use proxies::{MongoGuildProxy, SteamServerInfoProxy};
 mod controllers;
 mod discord;
@@ -31,13 +33,9 @@ async fn main() {
 
     {
         let uri = env::var("APP_MONGODB_URI").expect("Expected mongodb uri in enviroment");
-        let database =
-            env::var("APP_MONGODB_DATABASE").expect("Expected mongodb database in enviroment");
-        let collection =
-            env::var("APP_MONGODB_COLLECTION").expect("Expected mongodb collection in enviroment");
-        let mongodb_client = MongoGuildProxy::new(uri, database, collection)
-            .await
-            .unwrap();
+        let database = env::var("APP_MONGODB_DATABASE").expect("Expected mongodb database in enviroment");
+        let collection = env::var("APP_MONGODB_COLLECTION").expect("Expected mongodb collection in enviroment");
+        let mongodb_client = MongoGuildProxy::new(uri, database, collection).await.unwrap();
         let mut data = client.data.write().await;
         data.insert::<GuildController>(controllers::GuildController::new(mongodb_client));
     }

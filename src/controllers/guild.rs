@@ -1,5 +1,6 @@
 use crate::{
-    entities::{Address, GuildId, Result},
+    entities::{Address, GuildId},
+    errors::GuildResult,
     proxies::GuildProxy,
 };
 
@@ -12,22 +13,19 @@ impl<Proxy: GuildProxy + Send + Sync> GuildController<Proxy> {
         GuildController { proxy }
     }
 
-    pub async fn server_addresses(&self, id: String) -> Result<Vec<Vec<Address>>> {
-        todo!()
+    pub async fn server_addresses(&self, id: String) -> GuildResult<Vec<Address>> {
+        self.proxy.list_addresses(GuildId::new(id)).await
     }
 
-    pub async fn add_server(&self, address: Address) -> Result<()> {
-        todo!()
+    pub async fn add_server(&self, guild: GuildId, address: Address) -> GuildResult<()> {
+        self.proxy.add_address(guild, address).await
     }
 
-    pub async fn create_guild(&self, id: GuildId, name: String) -> Result<()> {
-        match self.proxy.create_guild(id, name).await {
-            Ok(_) => Ok(()),
-            Err(err) => Ok(()),
-        }
+    pub async fn create_guild(&self, guild: GuildId, name: String) -> GuildResult<()> {
+        self.proxy.create_guild(guild, name).await
     }
 
-    pub async fn delete_guild(&self, guild: GuildId) -> Result<()> {
-        todo!()
+    pub async fn delete_guild(&self, guild: GuildId) -> GuildResult<()> {
+        self.proxy.delete_guild(guild).await
     }
 }

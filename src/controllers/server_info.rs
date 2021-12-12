@@ -1,4 +1,7 @@
-use crate::entities::{Address, Result, ServerInfo};
+use std::ops::Deref;
+
+use crate::entities::{Address, ServerInfo};
+use crate::errors::ServerInfoResult;
 use crate::proxies::ServerInfoProxy;
 use futures::future::join_all;
 
@@ -11,7 +14,7 @@ impl<Proxy: ServerInfoProxy + Send + Sync> ServerInfoController<Proxy> {
         ServerInfoController { proxy }
     }
 
-    pub async fn info_for(&self, addresses: Vec<Address>) -> Result<Vec<ServerInfo>> {
+    pub async fn info_for(&self, addresses: Vec<Address>) -> ServerInfoResult<Vec<ServerInfo>> {
         if addresses.is_empty() {
             todo!()
         }
@@ -20,7 +23,13 @@ impl<Proxy: ServerInfoProxy + Send + Sync> ServerInfoController<Proxy> {
             let fut = self.proxy.server_info(a);
             futures.push(fut);
         }
-        let results = join_all(futures).await;
-        Ok(Vec::new())
+        let results: Vec<ServerInfo> = join_all(futures)
+            .await
+            .into_iter()
+            .filter(|x| x.is_ok())
+            .map(|x| x.unwrap())
+            .map(|x| x.to_owned())
+            .collect();
+        Ok(results)
     }
 }

@@ -1,4 +1,4 @@
 # Run rustfmt with this config (it should be picked up automatically).
-version = "Two"
-use_small_heuristics = "Max"
+use_small_heuristics = "Default"
 merge_derives = false
+max_width=120
