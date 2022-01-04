@@ -22,6 +22,7 @@ use serenity::{
 
 use crate::{
     discord::globals::{GuildController, SteamServerInfoController},
+    discord::{cmd_handlers, cmds},
     entities,
 };
 
@@ -32,40 +33,12 @@ pub struct Handler {
 
 #[async_trait]
 impl EventHandler for Handler {
-    // Bind commands to command handlers
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::ApplicationCommand(command) = interaction {
             let content = match command.data.name.as_str() {
-                "ping" => "Pong".to_string(),
-                "watch" => {
-                    let address = command
-                        .data
-                        .options
-                        .get(0)
-                        .expect("Expected an address in the form of <host or IP>:<port>")
-                        .resolved
-                        .as_ref()
-                        .expect("Expected String");
-
-                    let channel = command
-                        .data
-                        .options
-                        .get(1)
-                        .expect("Expected a channel that I can see")
-                        .resolved
-                        .as_ref()
-                        .expect("Expected channel object");
-
-                    let data_read = ctx.data.read().await;
-                    let guild = data_read
-                        .get::<GuildController>()
-                        .expect("MongoDB Client not found in bot state");
-
-                    // guild.add_server();
-
-                    format!("{:?}, {:?}", address, channel)
-                }
-                _ => "not implemented :(".to_string(),
+                "ping" => cmd_handlers::ping_command_handler(&command),
+                "watch" => cmd_handlers::watch_command_handler(&ctx, &command).await,
+                _ => cmd_handlers::cmd_not_found(),
             };
 
             if let Err(why) = command
@@ -81,32 +54,13 @@ impl EventHandler for Handler {
         }
     }
 
-    // Create commands with metainformation about it
     async fn ready(&self, ctx: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
 
         let commands = ApplicationCommand::set_global_application_commands(&ctx.http, |commands| {
             commands
-                .create_application_command(|command| command.name("ping").description("A ping command"))
-                .create_application_command(|command| {
-                    command
-                        .name("watch")
-                        .description("Add a server address to watch")
-                        .create_option(|option| {
-                            option
-                                .name("address")
-                                .description("The address to watch in the format of <host or IP>:<port>")
-                                .kind(ApplicationCommandOptionType::String)
-                                .required(true)
-                        })
-                        .create_option(|option| {
-                            option
-                                .name("channel")
-                                .description("Where should I put the message about the server status?")
-                                .kind(ApplicationCommandOptionType::Channel)
-                                .required(true)
-                        })
-                })
+                .create_application_command(cmds::ping_command)
+                .create_application_command(cmds::watch_command)
         })
         .await;
 
