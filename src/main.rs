@@ -1,14 +1,16 @@
-use serenity::prelude::*;
-use std::env;
+#![warn(clippy::all, clippy::restriction, clippy::pedantic, clippy::nursery, clippy::cargo)]
 
+use serenity::prelude::*;
+use std::{env, time::Duration};
+
+mod controllers;
+mod discord;
 mod entities;
 mod errors;
 mod proxies;
 mod serde_helpers;
+use discord::{BackgroundJobs, GuildController, Handler, SteamServerInfoController};
 use proxies::{MongoGuildProxy, SteamServerInfoProxy};
-mod controllers;
-mod discord;
-use discord::{GuildController, Handler, SteamServerInfoController};
 
 #[tokio::main]
 async fn main() {
@@ -38,6 +40,15 @@ async fn main() {
         let mongodb_client = MongoGuildProxy::new(uri, database, collection).await.unwrap();
         let mut data = client.data.write().await;
         data.insert::<GuildController>(controllers::GuildController::new(mongodb_client));
+    }
+
+    {
+        let heartbeat_interval = env::var("APP_SCHEDULER_HEARTBEAT_INTERVAL_SECS")
+            .map(|x| x.parse::<u64>().unwrap())
+            .expect("Expected heartbeat interval in enviroment");
+        let scheduler = rs_flow::Scheduler::new(Duration::from_secs(heartbeat_interval));
+        let mut data = client.data.write().await;
+        data.insert::<BackgroundJobs>(scheduler)
     }
 
     if let Err(why) = client.start().await {

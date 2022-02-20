@@ -13,8 +13,8 @@ impl<Proxy: GuildProxy + Send + Sync> GuildController<Proxy> {
         GuildController { proxy }
     }
 
-    pub async fn server_addresses(&self, id: String) -> GuildResult<Vec<Address>> {
-        self.proxy.list_addresses(GuildId::new(id)).await
+    pub async fn list_addresses(&self, guild: GuildId) -> GuildResult<Vec<Address>> {
+        self.proxy.list_addresses(guild).await
     }
 
     pub async fn add_server(&self, guild: GuildId, address: Address) -> GuildResult<()> {
@@ -27,5 +27,9 @@ impl<Proxy: GuildProxy + Send + Sync> GuildController<Proxy> {
 
     pub async fn delete_guild(&self, guild: GuildId) -> GuildResult<()> {
         self.proxy.delete_guild(guild).await
+    }
+
+    pub async fn remove_address(&self, guild_id: GuildId, address: Address) -> GuildResult<()> {
+        self.proxy.remove_address(guild_id, address).await
     }
 }
