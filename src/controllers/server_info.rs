@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use crate::entities::{Address, ServerInfo};
 use crate::errors::ServerInfoResult;
 use crate::proxies::ServerInfoProxy;
