@@ -9,6 +9,7 @@ mod entities;
 mod errors;
 mod proxies;
 mod serde_helpers;
+mod tasks;
 use discord::{BackgroundJobs, GuildController, Handler, SteamServerInfoController};
 use proxies::{MongoGuildProxy, SteamServerInfoProxy};
 
