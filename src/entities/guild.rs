@@ -6,6 +6,7 @@ pub struct Guild {
     #[serde(rename = "_id")]
     pub id: String,
     pub name: String,
+    pub channel_id: Option<String>,
     pub addresses: Vec<Address>,
     pub settings: BotSettings,
 }
@@ -15,6 +16,7 @@ impl Guild {
         Guild {
             id,
             name,
+            channel_id: None,
             addresses: vec![],
             settings: BotSettings::default(),
         }

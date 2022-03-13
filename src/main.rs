@@ -1,7 +1,7 @@
-#![warn(clippy::all, clippy::restriction, clippy::pedantic, clippy::nursery, clippy::cargo)]
-
+#![warn(clippy::suspicious, clippy::perf, clippy::cargo)]
+#![deny(clippy::correctness)]
 use serenity::prelude::*;
-use std::{env, time::Duration};
+use std::{env, sync::Arc, time::Duration};
 
 mod controllers;
 mod discord;
@@ -31,16 +31,24 @@ async fn main() {
         let proxy = SteamServerInfoProxy::new().await.unwrap();
 
         let mut data = client.data.write().await;
-        data.insert::<SteamServerInfoController>(controllers::ServerInfoController::new(proxy));
+        data.insert::<SteamServerInfoController>(Arc::new(controllers::ServerInfoController::new(
+            Box::new(proxy),
+        )));
     }
 
     {
         let uri = env::var("APP_MONGODB_URI").expect("Expected mongodb uri in enviroment");
-        let database = env::var("APP_MONGODB_DATABASE").expect("Expected mongodb database in enviroment");
-        let collection = env::var("APP_MONGODB_COLLECTION").expect("Expected mongodb collection in enviroment");
-        let mongodb_client = MongoGuildProxy::new(uri, database, collection).await.unwrap();
+        let database =
+            env::var("APP_MONGODB_DATABASE").expect("Expected mongodb database in enviroment");
+        let collection =
+            env::var("APP_MONGODB_COLLECTION").expect("Expected mongodb collection in enviroment");
+        let mongodb_client = MongoGuildProxy::new(uri, database, collection)
+            .await
+            .unwrap();
         let mut data = client.data.write().await;
-        data.insert::<GuildController>(controllers::GuildController::new(mongodb_client));
+        data.insert::<GuildController>(Arc::new(controllers::GuildController::new(Box::new(
+            mongodb_client,
+        ))));
     }
 
     {
@@ -49,7 +57,7 @@ async fn main() {
             .expect("Expected heartbeat interval in enviroment");
         let scheduler = rs_flow::Scheduler::new(Duration::from_secs(heartbeat_interval));
         let mut data = client.data.write().await;
-        data.insert::<BackgroundJobs>(scheduler)
+        data.insert::<BackgroundJobs>(Arc::new(RwLock::new(scheduler)))
     }
 
     if let Err(why) = client.start().await {

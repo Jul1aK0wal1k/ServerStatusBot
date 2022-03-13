@@ -1,5 +1,8 @@
 version: "3.1"
 
+volumes:
+  mongo-data:
+
 services:
   mongo:
     image: mongo
@@ -9,10 +12,14 @@ services:
       - "27017:27017"
     environment:
       MONGO_INITDB_DATABASE: server-monitor
+    volumes:
+      - mongo-data:/data/db
 
   mongo-express:
     image: mongo-express
     container_name: server-monitor-mongo-express
+    depends_on:
+      - mongo
     restart: always
     environment:
       - ME_CONFIG_MONGODB_URL=mongodb://server-monitor-mongo-db:27017

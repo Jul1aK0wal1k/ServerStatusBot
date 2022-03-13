@@ -2,13 +2,16 @@ use crate::entities::{Address, ServerInfo};
 use crate::errors::ServerInfoResult;
 use crate::proxies::ServerInfoProxy;
 use futures::future::join_all;
+use std::panic;
 
-pub struct ServerInfoController<Proxy: ServerInfoProxy + Send + Sync> {
-    proxy: Proxy,
+type ServerInfoType = dyn ServerInfoProxy + Send + Sync + panic::RefUnwindSafe + panic::UnwindSafe;
+
+pub struct ServerInfoController {
+    proxy: Box<ServerInfoType>,
 }
 
-impl<Proxy: ServerInfoProxy + Send + Sync> ServerInfoController<Proxy> {
-    pub fn new(proxy: Proxy) -> Self {
+impl ServerInfoController {
+    pub fn new(proxy: Box<ServerInfoType>) -> Self {
         ServerInfoController { proxy }
     }
 
@@ -26,7 +29,6 @@ impl<Proxy: ServerInfoProxy + Send + Sync> ServerInfoController<Proxy> {
             .into_iter()
             .filter(|x| x.is_ok())
             .map(|x| x.unwrap())
-            .map(|x| x.to_owned())
             .collect();
         Ok(results)
     }

@@ -19,3 +19,9 @@ impl Display for GuildId {
         write!(f, "{}", self.id)
     }
 }
+
+impl From<String> for GuildId {
+    fn from(s: String) -> Self {
+        GuildId::new(s)
+    }
+}

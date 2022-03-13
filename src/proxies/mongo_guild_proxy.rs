@@ -13,7 +13,11 @@ pub struct MongoGuildProxy {
 }
 
 impl MongoGuildProxy {
-    pub async fn new(uri: String, database_name: String, collection_name: String) -> GuildResult<Self> {
+    pub async fn new(
+        uri: String,
+        database_name: String,
+        collection_name: String,
+    ) -> GuildResult<Self> {
         match Client::with_uri_str(uri).await {
             Ok(client) => Ok(MongoGuildProxy {
                 client,
@@ -22,7 +26,7 @@ impl MongoGuildProxy {
             }),
             Err(error) => {
                 let error_msg = error.to_string();
-                Err(GuildError::FailedToCreateProxy(error_msg))
+                Err(GuildError::RequestFailedWithReason(error_msg))
             }
         }
     }
@@ -44,7 +48,7 @@ impl GuildProxy for MongoGuildProxy {
             .await
         {
             Ok(_) => Ok(()),
-            Err(_) => Err(GuildError::FailedGuildCreation),
+            Err(err) => Err(GuildError::RequestFailedWithReason(err.to_string())),
         }
     }
 
@@ -55,13 +59,36 @@ impl GuildProxy for MongoGuildProxy {
             .collection::<bson::Document>(&self.collection_name);
 
         match bson::to_document(&guild) {
-            Ok(query) => match collection.delete_one(query, options::DeleteOptions::default()).await {
+            Ok(query) => match collection
+                .delete_one(query, options::DeleteOptions::default())
+                .await
+            {
                 Ok(_) => Ok(()),
-                Err(_) => Err(GuildError::FailedGuildDeletion),
+                Err(err) => Err(GuildError::RequestFailedWithReason(err.to_string())),
             },
             Err(_) => panic!("BSON can't be malformed cause it's struct with a `String`"),
         }
     }
+
+    async fn set_channel(&self, guild: GuildId, channel: String) -> GuildResult<()> {
+        let collection = self
+            .client
+            .database(&self.database_name)
+            .collection::<Guild>(&self.collection_name);
+
+        match collection
+            .update_one(
+                bson::doc! {"_id": guild.id},
+                bson::doc! {"$set": {"channel": channel}},
+                None,
+            )
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(err) => Err(GuildError::RequestFailedWithReason(err.to_string())),
+        }
+    }
+
     async fn add_address(&self, guild: GuildId, address: Address) -> GuildResult<()> {
         let collection = self
             .client
@@ -70,13 +97,13 @@ impl GuildProxy for MongoGuildProxy {
         match collection
             .update_one(
                 bson::doc! {"_id": guild.id},
-                bson::doc! {"bot_settings.hosts": {"$addToSet": address.to_string()}},
+                bson::doc! {"$addToSet": {"addresses": address.to_string()}},
                 None,
             )
             .await
         {
             Ok(_) => Ok(()),
-            Err(_) => Err(GuildError::FailedToAddAddress(address)),
+            Err(err) => Err(GuildError::RequestFailedWithReason(err.to_string())),
         }
     }
     async fn list_addresses(&self, guild_id: GuildId) -> GuildResult<Vec<Address>> {
@@ -85,14 +112,15 @@ impl GuildProxy for MongoGuildProxy {
             .database(&self.database_name)
             .collection::<Guild>(&self.collection_name);
         let filter = bson::doc! {"_id": guild_id.id};
-        if let Ok(cursor) = collection.find_one(filter, None).await {
-            if let Some(guild) = cursor {
-                Ok(guild.addresses)
-            } else {
-                Err(GuildError::GuildNotFound)
+        match collection.find_one(filter, None).await {
+            Ok(maybe_guild) => {
+                if let Some(guild) = maybe_guild {
+                    Ok(guild.addresses)
+                } else {
+                    Err(GuildError::GuildNotFound)
+                }
             }
-        } else {
-            Err(GuildError::FailedRetrievingAddresses)
+            Err(err) => Err(GuildError::RequestFailedWithReason(err.to_string())),
         }
     }
     async fn remove_address(&self, guild: GuildId, address: Address) -> GuildResult<()> {
@@ -102,9 +130,25 @@ impl GuildProxy for MongoGuildProxy {
             .collection::<Guild>(&self.collection_name);
         let bson_address = to_bson(&address).unwrap();
         let update = bson::doc! {"$pull": {"addresses": bson_address}};
-        match collection.update_one(bson::doc! {"_id": guild.id}, update, None).await {
+        match collection
+            .update_one(bson::doc! {"_id": guild.id}, update, None)
+            .await
+        {
             Ok(_result) => Ok(()),
-            Err(_error) => Err(GuildError::FailedAddressRemoval(address)),
+            Err(error) => Err(GuildError::RequestFailedWithReason(error.to_string())),
         }
+    }
+
+    async fn status_channel_id(&self, guild: GuildId) -> GuildResult<String> {
+        let filter = bson::doc! {"_id": guild.id};
+        self.client
+            .database(&self.database_name)
+            .collection::<Guild>(&self.collection_name)
+            .find_one(filter, None)
+            .await
+            .map_err(|err| GuildError::RequestFailedWithReason(err.to_string()))?
+            .ok_or(GuildError::GuildNotFound)?
+            .channel_id
+            .ok_or(GuildError::ChannelNotSet)
     }
 }

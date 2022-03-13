@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::{fmt, num::ParseIntError, str::FromStr, string::ParseError};
+use std::{fmt, str::FromStr};
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Address {
@@ -24,7 +24,7 @@ impl FromStr for Address {
     type Err = ParseAddressError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let splitted: Vec<&str> = s.split(":").collect();
+        let splitted: Vec<&str> = s.split(':').collect();
         match splitted.len() {
             1 => {
                 let host = splitted[0].to_owned();

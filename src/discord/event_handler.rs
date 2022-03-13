@@ -1,5 +1,12 @@
 use std::{sync::Arc, time::Duration};
 
+use crate::{
+    discord::{commands, BackgroundJobs, GuildController, SteamServerInfoController},
+    entities,
+    tasks::CreateOrUpdateStatusMsg,
+};
+use futures::{stream::FuturesUnordered, StreamExt};
+use rs_flow::{SchedulerResult, TaskId};
 use serenity::{
     async_trait,
     client::{Context, EventHandler},
@@ -7,17 +14,10 @@ use serenity::{
         guild::{Guild, GuildUnavailable},
         id::GuildId,
         interactions::{
-            application_command::{ApplicationCommand, ApplicationCommandOptionType},
-            Interaction, InteractionResponseType,
+            application_command::ApplicationCommand, Interaction, InteractionResponseType,
         },
         prelude::Ready,
     },
-};
-
-use crate::{
-    discord::{cmd_handlers, cmds, BackgroundJobs, GuildController, SteamServerInfoController},
-    entities,
-    tasks::CreateOrUpdateStatusMsg,
 };
 
 #[derive(Default)]
@@ -28,16 +28,17 @@ impl EventHandler for Handler {
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::ApplicationCommand(command) = interaction {
             let content = match command.data.name.as_str() {
-                "ping" => cmd_handlers::ping_handler(&command),
-                "add_server" => cmd_handlers::add_server_handler(&ctx, &command).await,
+                "ping" => commands::handlers::ping_handler(&command),
+                "set_channel" => commands::handlers::set_channel_handler(&ctx, &command).await,
+                "add_server" => commands::handlers::add_server_handler(&ctx, &command).await,
                 "remove_server" => {
-                    cmd_handlers::remove_server_by_address_handler(&ctx, &command).await
+                    commands::handlers::remove_server_by_address_handler(&ctx, &command).await
                 }
                 "remove_server_by_alias" => {
-                    cmd_handlers::remove_server_by_address_handler(&ctx, &command).await
+                    commands::handlers::remove_server_by_address_handler(&ctx, &command).await
                 }
-                "list_servers" => cmd_handlers::list_servers_handler(&ctx, &command).await,
-                _ => cmd_handlers::command_not_found_handler(),
+                "list_servers" => commands::handlers::list_servers_handler(&ctx, &command).await,
+                _ => commands::handlers::errors::command_not_found_handler(),
             };
 
             if let Err(why) = command
@@ -58,11 +59,12 @@ impl EventHandler for Handler {
 
         let _ = ApplicationCommand::set_global_application_commands(&ctx.http, |commands| {
             commands
-                .create_application_command(cmds::ping_command)
-                .create_application_command(cmds::add_server_command)
-                .create_application_command(cmds::list_servers_command)
-                .create_application_command(cmds::remove_server_by_address_command)
-                .create_application_command(cmds::remove_server_by_alias_command)
+                .create_application_command(commands::ping_command)
+                .create_application_command(commands::set_channel_command)
+                .create_application_command(commands::add_server_command)
+                .create_application_command(commands::list_servers_command)
+                .create_application_command(commands::remove_server_by_address_command)
+                .create_application_command(commands::remove_server_by_alias_command)
         })
         .await;
     }
@@ -70,42 +72,58 @@ impl EventHandler for Handler {
     async fn cache_ready(&self, ctx: Context, guilds: Vec<GuildId>) {
         let ctx = Arc::new(ctx);
 
-        let handle = tokio::spawn(async move {
-            let data_read = ctx.data.read().await;
-            let guild_controller = data_read
-                .get::<GuildController>()
-                .expect("MongoDB Client not found in bot state");
+        let guild_controller = ctx
+            .data
+            .read()
+            .await
+            .get::<GuildController>()
+            .expect("MongoDB Client not found in bot state")
+            .clone();
 
-            let server_controller = data_read
-                .get::<SteamServerInfoController>()
-                .expect("Steam Client not found in bot state");
+        let server_controller = ctx
+            .data
+            .read()
+            .await
+            .get::<SteamServerInfoController>()
+            .expect("Steam Client not found in bot state")
+            .clone();
 
-            let guild_ids = guilds.iter().map(|x| x.to_string());
+        let scheduler = ctx
+            .data
+            .read()
+            .await
+            .get::<BackgroundJobs>()
+            .expect("Scheduler not in bot state")
+            .clone();
 
-            let mut data_rw = ctx.data.write().await;
-            let scheduler = data_rw
-                .get_mut::<BackgroundJobs>()
-                .expect("Scheduler not in bot state");
-            if let Err(err) = scheduler.start() {
-                panic!("Couldn't start scheduler, reason {0}", err)
-            }
-            let results = guilds.iter().map(|id| async {
-                let task_id = format!("task_{}", id.to_string());
-                let task = Box::new(CreateOrUpdateStatusMsg::new(
-                    server_controller,
-                    guild_controller,
-                ));
+        let results = guilds
+            .iter()
+            .map(|x| x.to_string())
+            .map(|id| {
+                let task_id = format!("task_{}", id);
+                Box::new(CreateOrUpdateStatusMsg::new(
+                    id,
+                    ctx.clone(),
+                    server_controller.clone(),
+                    guild_controller.clone(),
+                ))
+            })
+            .map(|task| async {
                 scheduler
+                    .read()
+                    .await
                     .add_task(
                         task,
-                        task_id,
+                        "".to_string(),
                         Duration::from_secs(60),
                         rs_flow::StartFrom::Now,
                     )
                     .await
-            });
-            // scheduler.add_task(task, &task_id, Duration::from_secs(60), rs_flow::StartFrom::Now)
-        });
+            })
+            .collect::<FuturesUnordered<_>>()
+            .collect::<Vec<SchedulerResult<TaskId>>>()
+            .await;
+        // scheduler.add_task(task, &task_id, Duration::from_secs(60), rs_flow::StartFrom::Now)
     }
 
     async fn guild_create(&self, ctx: Context, guild: Guild, _is_new: bool) {
@@ -114,7 +132,7 @@ impl EventHandler for Handler {
             .get::<GuildController>()
             .expect("MongoDB Client not found in bot state");
 
-        let id = entities::GuildId::new(guild.id.to_string());
+        let id = entities::GuildId::new(guild.id.0.to_string());
         let _result = client.create_guild(id, guild.name).await;
     }
 
@@ -125,7 +143,7 @@ impl EventHandler for Handler {
             let client = data_read
                 .get::<GuildController>()
                 .expect("MongoDB Client not found in bot state");
-            let delete_guild = entities::GuildId::new(data.id.to_string());
+            let delete_guild = entities::GuildId::new(data.id.0.to_string());
             let _result = client.delete_guild(delete_guild).await;
         }
     }

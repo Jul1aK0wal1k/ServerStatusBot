@@ -4,17 +4,27 @@ use crate::{
     proxies::GuildProxy,
 };
 
-pub struct GuildController<Proxy: GuildProxy + Send + Sync> {
-    proxy: Proxy,
+type GuildProxyType = dyn GuildProxy + Send + Sync;
+
+pub struct GuildController {
+    proxy: Box<GuildProxyType>,
 }
 
-impl<Proxy: GuildProxy + Send + Sync> GuildController<Proxy> {
-    pub fn new(proxy: Proxy) -> Self {
+impl GuildController {
+    pub fn new(proxy: Box<GuildProxyType>) -> Self {
         GuildController { proxy }
+    }
+
+    pub async fn status_channel_id(&self, guild: GuildId) -> GuildResult<String> {
+        self.proxy.status_channel_id(guild).await
     }
 
     pub async fn list_addresses(&self, guild: GuildId) -> GuildResult<Vec<Address>> {
         self.proxy.list_addresses(guild).await
+    }
+
+    pub async fn set_channel(&self, guild: GuildId, channel: String) -> GuildResult<()> {
+        self.proxy.set_channel(guild, channel).await
     }
 
     pub async fn add_server(&self, guild: GuildId, address: Address) -> GuildResult<()> {
