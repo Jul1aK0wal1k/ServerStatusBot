@@ -5,11 +5,16 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[dev-dependencies]
+rstest = "0.12"
+
 [dependencies]
 futures = "0.3"
 thiserror = "1"
 itertools = "0.10"
 chrono = "0.4"
+dotenv = "0.15"
+serde_with = "1.12"
 uuid = "0.8"
 async-trait = "0.1"
 log = "0.4"

@@ -17,7 +17,7 @@ pub async fn list_servers_handler(
             let guild_id = GuildId::new(id.0.to_string());
             match guild.list_addresses(guild_id).await {
                 Ok(adrs) => format!("Those are the addresses already added: {:?}!", adrs),
-                Err(e) => format!("Couldn't add server, reason: {}", e),
+                Err(e) => format!("Something went wrong: {}", e),
             }
         }
         None => "Something went really bad and we couldn't get your servers id".to_string(),

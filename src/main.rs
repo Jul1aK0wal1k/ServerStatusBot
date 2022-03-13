@@ -13,8 +13,16 @@ mod tasks;
 use discord::{BackgroundJobs, GuildController, Handler, SteamServerInfoController};
 use proxies::{MongoGuildProxy, SteamServerInfoProxy};
 
+fn load_env_file() {
+    let env_file_path = env::var("APP_ENV_FILE_PATH").map_or_else(|_| ".env".to_string(), |i| i);
+    dotenv::from_path(env_file_path)
+        .unwrap_or_else(|err| panic!("Couldn't load env file, reason: {}", err));
+}
+
 #[tokio::main]
 async fn main() {
+    load_env_file();
+
     let token = env::var("APP_DISCORD_TOKEN").expect("Expected a token in the environment");
     let application_id: u64 = env::var("APP_OAUTH_APPLICATION_ID")
         .expect("Expected an application id in the environment")

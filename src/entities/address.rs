@@ -1,11 +1,18 @@
 use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
+use serde_with::DisplayFromStr;
 use std::{fmt, str::FromStr};
 
+fn default_option<T>() -> Option<T> {
+    None
+}
+
+#[serde_as]
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Address {
     pub host: String,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    #[serde(default = "default_option")]
     pub port: Option<u16>,
 }
 
@@ -50,5 +57,24 @@ impl fmt::Display for Address {
         } else {
             write!(f, "{}", self.host)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Address;
+    use mongodb::bson;
+    use rstest::rstest;
+
+    #[rstest]
+    #[case("abc", None)]
+    #[case("foo", Some(8081))]
+    #[case("", Some(8081))]
+    fn serde_bson_address_test(#[case] host: &str, #[case] port: Option<u16>) {
+        let address = Address::new(host.to_string(), port);
+        let result_ser = bson::to_document(&address);
+        assert!(result_ser.is_ok());
+        let result_de = bson::from_document::<Address>(result_ser.unwrap());
+        assert!(result_de.is_ok())
     }
 }

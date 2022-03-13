@@ -94,10 +94,12 @@ impl GuildProxy for MongoGuildProxy {
             .client
             .database(&self.database_name)
             .collection::<Guild>(&self.collection_name);
+        let doc_address = bson::to_document(&address)
+            .map_err(|err| GuildError::RequestFailedWithReason(err.to_string()))?;
         match collection
             .update_one(
                 bson::doc! {"_id": guild.id},
-                bson::doc! {"$addToSet": {"addresses": address.to_string()}},
+                bson::doc! {"$addToSet": {"addresses": doc_address}},
                 None,
             )
             .await
