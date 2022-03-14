@@ -2,24 +2,24 @@ use async_trait::async_trait;
 use mongodb::bson::to_bson;
 use mongodb::{bson, options, Client};
 
+use crate::adapters::guild::GuildAdapter;
 use crate::entities::{Address, Guild, GuildId};
 use crate::errors::{GuildError, GuildResult};
-use crate::proxies::GuildProxy;
 
-pub struct MongoGuildProxy {
+pub struct MongoGuildAdapter {
     client: Client,
     database_name: String,
     collection_name: String,
 }
 
-impl MongoGuildProxy {
+impl MongoGuildAdapter {
     pub async fn new(
         uri: String,
         database_name: String,
         collection_name: String,
     ) -> GuildResult<Self> {
         match Client::with_uri_str(uri).await {
-            Ok(client) => Ok(MongoGuildProxy {
+            Ok(client) => Ok(MongoGuildAdapter {
                 client,
                 database_name,
                 collection_name,
@@ -33,7 +33,7 @@ impl MongoGuildProxy {
 }
 
 #[async_trait]
-impl GuildProxy for MongoGuildProxy {
+impl GuildAdapter for MongoGuildAdapter {
     async fn create_guild(&self, guild: GuildId, name: String) -> GuildResult<()> {
         let collection = self
             .client

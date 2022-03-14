@@ -1,17 +1,16 @@
+use crate::adapters::ServerInfoAdapter;
 use crate::entities::{Address, ServerInfo};
 use crate::errors::ServerInfoResult;
-use crate::proxies::ServerInfoProxy;
 use futures::future::join_all;
-use std::panic;
 
-type ServerInfoType = dyn ServerInfoProxy + Send + Sync + panic::RefUnwindSafe + panic::UnwindSafe;
+type ServerInfoAdapterRef = dyn ServerInfoAdapter + Send + Sync;
 
 pub struct ServerInfoController {
-    proxy: Box<ServerInfoType>,
+    proxy: Box<ServerInfoAdapterRef>,
 }
 
 impl ServerInfoController {
-    pub fn new(proxy: Box<ServerInfoType>) -> Self {
+    pub fn new(proxy: Box<ServerInfoAdapterRef>) -> Self {
         ServerInfoController { proxy }
     }
 

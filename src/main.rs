@@ -1,17 +1,18 @@
-#![warn(clippy::suspicious, clippy::perf, clippy::cargo)]
+#![warn(clippy::suspicious, clippy::perf)]
 #![deny(clippy::correctness)]
 use serenity::prelude::*;
 use std::{env, sync::Arc, time::Duration};
 
+mod adapters;
+mod config;
 mod controllers;
 mod discord;
 mod entities;
 mod errors;
-mod proxies;
 mod serde_helpers;
 mod tasks;
+use adapters::{MongoGuildAdapter, SteamServerInfoAdapter};
 use discord::{BackgroundJobs, GuildController, Handler, SteamServerInfoController};
-use proxies::{MongoGuildProxy, SteamServerInfoProxy};
 
 fn load_env_file() {
     let env_file_path = env::var("APP_ENV_FILE_PATH").map_or_else(|_| ".env".to_string(), |i| i);
@@ -36,7 +37,7 @@ async fn main() {
         .expect("Err creating client");
 
     {
-        let proxy = SteamServerInfoProxy::new().await.unwrap();
+        let proxy = SteamServerInfoAdapter::new().await.unwrap();
 
         let mut data = client.data.write().await;
         data.insert::<SteamServerInfoController>(Arc::new(controllers::ServerInfoController::new(
@@ -50,7 +51,7 @@ async fn main() {
             env::var("APP_MONGODB_DATABASE").expect("Expected mongodb database in enviroment");
         let collection =
             env::var("APP_MONGODB_COLLECTION").expect("Expected mongodb collection in enviroment");
-        let mongodb_client = MongoGuildProxy::new(uri, database, collection)
+        let mongodb_client = MongoGuildAdapter::new(uri, database, collection)
             .await
             .unwrap();
         let mut data = client.data.write().await;

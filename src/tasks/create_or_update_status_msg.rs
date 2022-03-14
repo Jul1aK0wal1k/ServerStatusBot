@@ -54,7 +54,7 @@ impl SchedulerTask for CreateOrUpdateStatusMsg {
                 msg.embed(|em| {
                     em.title("Antistasi Community Server 1")
                         .description("**Teamspeak Server Address:** `38.133.154.60`")
-                        .color(0x28a722 as i32)
+                        .color(0x28a722)
                         .thumbnail("https://i.postimg.cc/d0Y0krSc/mainserver-1-logo.png")
                         .field("ON", ":ballot_box_with_check:", true)
                         .author(|auth| {

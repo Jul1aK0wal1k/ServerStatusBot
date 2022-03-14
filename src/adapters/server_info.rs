@@ -5,6 +5,6 @@ use crate::{
 use async_trait::async_trait;
 
 #[async_trait]
-pub trait ServerInfoProxy {
+pub trait ServerInfoAdapter {
     async fn server_info(&self, address: Address) -> ServerInfoResult<ServerInfo>;
 }

@@ -21,4 +21,16 @@ impl Guild {
             settings: BotSettings::default(),
         }
     }
+
+    pub fn set_channel(&mut self, channel: String) {
+        self.channel_id = Some(channel);
+    }
+
+    pub fn add_address(&mut self, address: Address) {
+        self.addresses.push(address);
+    }
+
+    pub fn remove_address(&mut self, address: Address) {
+        self.addresses.retain(|item| *item != address);
+    }
 }

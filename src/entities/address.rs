@@ -8,7 +8,7 @@ fn default_option<T>() -> Option<T> {
 }
 
 #[serde_as]
-#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone, PartialEq)]
 pub struct Address {
     pub host: String,
     #[serde_as(as = "Option<DisplayFromStr>")]

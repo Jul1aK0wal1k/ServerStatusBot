@@ -1,17 +1,17 @@
 use crate::{
+    adapters::GuildAdapter,
     entities::{Address, GuildId},
     errors::GuildResult,
-    proxies::GuildProxy,
 };
 
-type GuildProxyType = dyn GuildProxy + Send + Sync;
+type GuildAdapterRef = dyn GuildAdapter + Send + Sync;
 
 pub struct GuildController {
-    proxy: Box<GuildProxyType>,
+    proxy: Box<GuildAdapterRef>,
 }
 
 impl GuildController {
-    pub fn new(proxy: Box<GuildProxyType>) -> Self {
+    pub fn new(proxy: Box<GuildAdapterRef>) -> Self {
         GuildController { proxy }
     }
 

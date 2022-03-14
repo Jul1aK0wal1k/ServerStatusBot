@@ -3,15 +3,27 @@ use std::sync::Arc;
 
 use crate::entities::{Address, ServerInfo};
 use crate::errors::{ServerInfoError, ServerInfoResult};
-use crate::proxies::ServerInfoProxy;
 use a2s::A2SClient;
 
-pub struct SteamServerInfoProxy {
+use super::ServerInfoAdapter;
+
+pub struct SteamServerInfoAdapter {
     client: Arc<A2SClient>,
 }
 
+impl SteamServerInfoAdapter {
+    pub async fn new() -> ServerInfoResult<Self> {
+        match A2SClient::new().await {
+            Ok(client) => Ok(SteamServerInfoAdapter {
+                client: Arc::new(client),
+            }),
+            Err(reason) => Err(ServerInfoError::FailedToCreateProxy(reason.to_string())),
+        }
+    }
+}
+
 #[async_trait]
-impl ServerInfoProxy for SteamServerInfoProxy {
+impl ServerInfoAdapter for SteamServerInfoAdapter {
     async fn server_info(&self, address: Address) -> ServerInfoResult<ServerInfo> {
         match self.client.info(address.to_string()).await {
             Ok(info) => Ok(ServerInfo::new(
@@ -22,17 +34,6 @@ impl ServerInfoProxy for SteamServerInfoProxy {
                 info.max_players as u16,
             )),
             Err(_err) => Err(ServerInfoError::FailedToFetch(address)),
-        }
-    }
-}
-
-impl SteamServerInfoProxy {
-    pub async fn new() -> ServerInfoResult<Self> {
-        match A2SClient::new().await {
-            Ok(client) => Ok(SteamServerInfoProxy {
-                client: Arc::new(client),
-            }),
-            Err(reason) => Err(ServerInfoError::FailedToCreateProxy(reason.to_string())),
         }
     }
 }
