@@ -9,6 +9,7 @@ edition = "2021"
 rstest = "0.12"
 
 [dependencies]
+toml = "*"
 futures = "0.3"
 thiserror = "1"
 itertools = "0.10"
